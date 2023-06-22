@@ -38,12 +38,12 @@ def test_create_appointment_api(client):
     print(obj)
     new_appointment_id = obj.get('id')
 
-    #7/19 is a tuesday, allow patient to book multiple appointments
+    #7/18 is a tuesday
     response = client.post('/create', json={
         'doctor_id': 1,
         'patient_id': 1,
-        'start_time': "2023-07-18T10:00:00",
-        'end_time': "2023-07-18T11:30:00"
+        'start_time': "2023-07-18T11:00:00",
+        'end_time': "2023-07-18T12:30:00"
     })
     assert response.status_code == HTTPStatus.OK
     obj = response.json
@@ -148,6 +148,8 @@ def test_get_appointment_doc_api(client):
         
 
 def test_get_first_available_appointment_api(client):
+    #Test
+    #
     #happy path
     duration = 1
     after_time = dt.now().isoformat()
@@ -159,6 +161,8 @@ def test_get_first_available_appointment_api(client):
     assert after_time <= appointment['start_time']
     assert dt.fromisoformat(appointment['end_time']) - dt.fromisoformat(appointment['start_time']) == datetime.timedelta(minutes=duration)
 
+    #Test
+    #
     #books to next biz day
     duration = 40
     #7/18 is a tuesday
@@ -167,13 +171,40 @@ def test_get_first_available_appointment_api(client):
     response = client.get(f'/get_first_available_appointment?doctor_id=1&after_time={after_time}&duration={duration}')
     assert response.status_code == HTTPStatus.OK
 
-    # Test that the returned appointment is after the specified time
+    # Confirm that the returned appointment is on Thursday, which is the next biz day of doc 1 after Tuesday
     appointment = response.json
     print("next appointment response:", response.json)
     assert appointment['start_time'] == "2023-07-20T00:00:00"
     assert dt.fromisoformat(appointment['end_time']) - dt.fromisoformat(appointment['start_time']) == datetime.timedelta(minutes=duration)
 
+    #Test
+    #
+    #books to next biz day because of packed tuesday
 
+    response = client.post('/create', json={
+        'doctor_id': 1,
+        'patient_id': 1,
+        #7/18 is a tuesday
+        'start_time': "2023-07-18T11:00:00",
+        'end_time': "2023-07-18T16:30:00"
+    })
+    assert response.status_code == HTTPStatus.OK
+    #40 min is too long to fit after 16:30, since doc stops working at 17:00
+    duration = 40
+    #7/18 is a tuesday
+    after_time = "2023-07-18T10:40:00"
+
+    response = client.get(f'/get_first_available_appointment?doctor_id=1&after_time={after_time}&duration={duration}')
+    assert response.status_code == HTTPStatus.OK
+
+    # Test that the returned appointment is on Thursday, which is the next biz day of doc 1 after Tuesday
+    appointment = response.json
+    print("next appointment response:", response.json)
+    assert appointment['start_time'] == "2023-07-20T00:00:00"
+    assert dt.fromisoformat(appointment['end_time']) - dt.fromisoformat(appointment['start_time']) == datetime.timedelta(minutes=duration)
+
+    # Test
+    #
     # 14 hr duration, fail as no doctors work that long
     duration = 14 * 60
     response = client.get(f'/get_first_available_appointment?doctor_id=1&after_time={dt.now().isoformat()}&duration={duration}')
