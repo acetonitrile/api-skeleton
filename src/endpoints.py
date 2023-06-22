@@ -141,18 +141,19 @@ def get_first_available_appointment():
             # then increment to the start of the next working day and continue
             current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_time.start_time.hour, minute=working_time.start_time.minute)
             continue
-        
-        conflicting_appointment = Appointment.query.filter_by(doctor_id=doctor_id).filter(
-            (Appointment.start_time < end_time) & (Appointment.end_time > current_time)).first()
 
-        if conflicting_appointment is None:
+        conflicting_appointments = Appointment.query.filter_by(doctor_id=doctor_id).filter(
+            (Appointment.start_time < end_time) & (Appointment.end_time > current_time)).all()
+
+        if len(conflicting_appointments) == 0:
             # No conflicting appointments and appointment fits within working hours, 
             # this slot is available
             return jsonify(start_time=current_time.isoformat(), end_time=end_time.isoformat()), 200
 
-        # Increment the current time by the minimum appointment duration
-        #current_time += datetime.timedelta(minutes=1)
-        current_time = current_time.replace(hour=conflicting_appointment.end_time.hour, minute=conflicting_appointment.end_time.minute)
+        # Increment the current time to the end of the latest conflicting appointment
+        latest_conflict_end = max(a.end_time for a in conflicting_appointments)
+        current_time = max(current_time, latest_conflict_end)
 
 
     return jsonify(error="No free appointments for next 3 years"), 409
+
