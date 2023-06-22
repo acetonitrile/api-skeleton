@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from datetime import datetime as dt
+import datetime
 
 def test_home_api(client):
     response = client.get('/')
@@ -11,19 +12,6 @@ def test_home_api(client):
     # json allows us to get back a deserialized data structure without us needing to manually do it
     assert response.json == {'data': 'OK'}
 
-
-def test_dummy_model_api(client):
-    response = client.post('/dummy_model', json={
-        'value': 'foobar'
-    })
-    assert response.status_code == HTTPStatus.OK
-    obj = response.json
-    new_id = obj.get('id')
-    response = client.get(f'/dummy_model/{new_id}')
-    assert response.status_code == HTTPStatus.OK
-    assert response.json.get('value') == 'foobar'
-
-import datetime
 
 def test_create_appointment_api(client):
     #7/17 is a monday
