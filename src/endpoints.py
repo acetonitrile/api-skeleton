@@ -1,16 +1,13 @@
+import logging
+import datetime
+from datetime import datetime as dt
 from flask import Blueprint, jsonify, request
 from http import HTTPStatus
 from src.extensions import db
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
-import logging
 
 from src.models import Doctor, WorkingTime, Appointment
-
-import datetime
-
-from datetime import datetime as dt
-
 logging.basicConfig(level=logging.DEBUG)
 home = Blueprint('/', __name__)
 
@@ -19,6 +16,11 @@ home = Blueprint('/', __name__)
 # https://webargs.readthedocs.io/en/latest/framework_support.html
 # https://flask.palletsprojects.com/en/2.0.x/quickstart/#variable-rules
 
+from threading import Lock
+
+# Create a global lock for writing new appointments into the db to prevent double booking
+# locking really only needs to be done on a per doctor level schedule
+write_lock = Lock()
 
 @home.route('/')
 def index():
@@ -44,16 +46,17 @@ def create_appointment():
                                      working_time.start_time < end_time.time() <= working_time.end_time):
         return jsonify(error="Outside of working hours"), 409
 
-    # Check for conflicting appointments
-    conflicting_appointment = Appointment.query.filter_by(doctor_id=doctor_id).filter(
-        (Appointment.start_time < end_time) & (Appointment.end_time > start_time)).first()
-    if conflicting_appointment is not None:
-        return jsonify(error="Conflicting appointment"), 409
+    with write_lock:
+        # Check for conflicting appointments
+        conflicting_appointment = Appointment.query.filter_by(doctor_id=doctor_id).filter(
+            (Appointment.start_time < end_time) & (Appointment.end_time > start_time)).first()
+        if conflicting_appointment is not None:
+            return jsonify(error="Conflicting appointment"), 409
 
-    # Create the appointment
-    appointment = Appointment(doctor_id=doctor_id, patient_id=patient_id, start_time=start_time, end_time=end_time)
-    db.session.add(appointment)
-    db.session.commit()
+        # Create the appointment
+        appointment = Appointment(doctor_id=doctor_id, patient_id=patient_id, start_time=start_time, end_time=end_time)
+        db.session.add(appointment)
+        db.session.commit()
 
     return jsonify(id=appointment.id), 200
 
@@ -85,7 +88,7 @@ def get_first_available_appointment():
     if doctor is None:
         return jsonify(error="Doctor not found"), 404
 
-    #Prevents infinite loop
+    #Prevents infinite loop as long as current_time increments
     while current_time - after_time < datetime.timedelta(days=3 * 366):
         # Get the working hours for the current day
         working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
@@ -122,7 +125,7 @@ def get_first_available_appointment():
 
         # Increment the current time to the end of the latest conflicting appointment
         latest_conflict_end = max(a.end_time for a in conflicting_appointments)
-        current_time = max(current_time, latest_conflict_end)
+        current_time = max(current_time + datetime.timedelta(minutes=1), latest_conflict_end)
 
 
     return jsonify(error="No free appointments for next 3 years"), 409
