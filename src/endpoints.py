@@ -122,8 +122,12 @@ def get_first_available_appointment():
         # Get the working hours for the current day
         working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
         if working_time is None or not (working_time.start_time <= current_time.time() < working_time.end_time):
-            # If the doctor doesn't work this day, increment to the next day and continue
+            # If the doctor doesn't work this day, or we're currently outside of working hours
+            # increment to the next day at start of working hours or at 00:00 if doctor doesn't work that day
             current_time = (current_time + datetime.timedelta(days=1)).replace(hour=0, minute=0)
+            next_day_working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
+            if next_day_working_time is not None:
+                current_time = current_time.replace(hour=next_day_working_time.start_time.hour, minute=next_day_working_time.start_time.minute)
             continue
         
         # Check for conflicting appointments and if appointment fits within working hours
@@ -134,7 +138,10 @@ def get_first_available_appointment():
         if end_time > end_of_working_time: 
             # If the end_time is later than the end of working hours, 
             # then increment to the start of the next working day and continue
-            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_time.start_time.hour, minute=working_time.start_time.minute)
+            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=0, minute=0)
+            next_day_working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
+            if next_day_working_time is not None:
+                current_time = current_time.replace(hour=next_day_working_time.start_time.hour, minute=next_day_working_time.start_time.minute)
             continue
 
         conflicting_appointments = Appointment.query.filter_by(doctor_id=doctor_id).filter(
@@ -151,4 +158,3 @@ def get_first_available_appointment():
 
 
     return jsonify(error="No free appointments for next 3 years"), 409
-
