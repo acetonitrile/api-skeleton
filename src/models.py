@@ -6,7 +6,7 @@ import enum
 
 class Doctor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(200), nullable=False)
+    full_name = db.Column(db.Text, nullable=False)
 
     def serialize(self):
         return {

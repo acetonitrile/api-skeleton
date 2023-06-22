@@ -33,17 +33,6 @@ def create_appointment():
     start_time = dt.fromisoformat(data.get('start_time'))
     end_time = dt.fromisoformat(data.get('end_time'))
 
-    '''table_name = Doctor.__tablename__
-    table_state = []
-    inspector = inspect(db.engine)
-    columns = inspector.get_columns(table_name)
-    
-    for row in db.session.query(Doctor).all():
-        row_state = {column['name']: getattr(row, column['name']) for column in columns}
-        table_state.append(row_state)
-    
-    logging.info(table_state)
-    return jsonify(table_state)'''
     doctor = Doctor.query.get(doctor_id)
     if doctor is None:
         return jsonify(error="Doctor not found"), 404
