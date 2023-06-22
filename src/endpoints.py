@@ -70,6 +70,7 @@ def create_appointment():
         return jsonify(error="Doctor not found"), 404
 
     # Check if the time is within the doctor's working hours
+    #only handles one slice of working hour per day for a doctor
     working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=start_time.strftime('%A')).first()
     if working_time is None or not (working_time.start_time <= start_time.time() < working_time.end_time and
                                      working_time.start_time < end_time.time() <= working_time.end_time):
@@ -120,15 +121,9 @@ def get_first_available_appointment():
     while current_time - after_time < datetime.timedelta(days=3 * 366):
         # Get the working hours for the current day
         working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
-        if working_time is None:
+        if working_time is None or not (working_time.start_time <= current_time.time() < working_time.end_time):
             # If the doctor doesn't work this day, increment to the next day and continue
             current_time = (current_time + datetime.timedelta(days=1)).replace(hour=0, minute=0)
-            continue
-        
-        # Check if the current time is outside of the doctor's working hours for this day
-        if not (working_time.start_time <= current_time.time() < working_time.end_time):
-            # If outside of working hours, increment to the next day and continue
-            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_time.start_time.hour, minute=working_time.start_time.minute)
             continue
         
         # Check for conflicting appointments and if appointment fits within working hours
