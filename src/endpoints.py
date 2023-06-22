@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 import logging
 
-from src.models import Doctor, WorkingHour, Appointment
+from src.models import Doctor, WorkingTime, Appointment
 
 import datetime
 
@@ -70,9 +70,9 @@ def create_appointment():
         return jsonify(error="Doctor not found"), 404
 
     # Check if the time is within the doctor's working hours
-    working_hours = WorkingHour.query.filter_by(doctor_id=doctor_id, day_of_week=start_time.strftime('%A')).first()
-    if working_hours is None or not (working_hours.start_hour <= start_time.time() < working_hours.end_hour and
-                                     working_hours.start_hour < end_time.time() <= working_hours.end_hour):
+    working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=start_time.strftime('%A')).first()
+    if working_time is None or not (working_time.start_time <= start_time.time() < working_time.end_time and
+                                     working_time.start_time < end_time.time() <= working_time.end_time):
         return jsonify(error="Outside of working hours"), 409
 
     # Check for conflicting appointments
@@ -119,27 +119,27 @@ def get_first_available_appointment():
     #Prevents infinite loop
     while current_time - after_time < datetime.timedelta(days=3 * 366):
         # Get the working hours for the current day
-        working_hours = WorkingHour.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
-        if working_hours is None:
+        working_time = WorkingTime.query.filter_by(doctor_id=doctor_id, day_of_week=current_time.strftime('%A')).first()
+        if working_time is None:
             # If the doctor doesn't work this day, increment to the next day and continue
             current_time = (current_time + datetime.timedelta(days=1)).replace(hour=0, minute=0)
             continue
         
         # Check if the current time is outside of the doctor's working hours for this day
-        if not (working_hours.start_hour <= current_time.time() < working_hours.end_hour):
+        if not (working_time.start_time <= current_time.time() < working_time.end_time):
             # If outside of working hours, increment to the next day and continue
-            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_hours.start_hour.hour, minute=working_hours.start_hour.minute)
+            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_time.start_time.hour, minute=working_time.start_time.minute)
             continue
         
         # Check for conflicting appointments and if appointment fits within working hours
         end_time = current_time + datetime.timedelta(minutes=desired_duration)
 
-        end_of_working_hours = datetime.datetime.combine(current_time.date(), working_hours.end_hour)
+        end_of_working_time = datetime.datetime.combine(current_time.date(), working_time.end_time)
 
-        if end_time > end_of_working_hours: 
+        if end_time > end_of_working_time: 
             # If the end_time is later than the end of working hours, 
             # then increment to the start of the next working day and continue
-            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_hours.start_hour.hour, minute=working_hours.start_hour.minute)
+            current_time = (current_time + datetime.timedelta(days=1)).replace(hour=working_time.start_time.hour, minute=working_time.start_time.minute)
             continue
 
         conflicting_appointment = Appointment.query.filter_by(doctor_id=doctor_id).filter(

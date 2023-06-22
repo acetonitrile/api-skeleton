@@ -1,6 +1,7 @@
 from src.extensions import db
 from flask import jsonify
-from sqlalchemy import Time
+from sqlalchemy import Enum, Time
+import enum
 
 
 class DummyModel(db.Model):
@@ -15,7 +16,7 @@ class DummyModel(db.Model):
 
 class Doctor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(80), nullable=False)
+    full_name = db.Column(db.String(200), nullable=False)
 
     def serialize(self):
         return {
@@ -23,21 +24,34 @@ class Doctor(db.Model):
             'full_name': self.full_name
         }
 
-class WorkingHour(db.Model):
+
+class DayOfWeekEnum(enum.Enum):
+    Monday = "Monday"
+    Tuesday = "Tuesday"
+    Wednesday = "Wednesday"
+    Thursday = "Thursday"
+    Friday = "Friday"
+    Saturday = "Saturday"
+    Sunday = "Sunday"
+
+
+
+class WorkingTime(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctor.id'), nullable=False)
-    day_of_week = db.Column(db.String(10), nullable=False)
-    start_hour = db.Column(Time, nullable=False)
-    end_hour = db.Column(Time, nullable=False)
+    day_of_week = db.Column(Enum(DayOfWeekEnum), nullable=False)
+    start_time = db.Column(Time, nullable=False)
+    end_time = db.Column(Time, nullable=False)
 
     def serialize(self):
         return {
             'id': self.id,
             'doctor_id': self.doctor_id,
-            'day_of_week': self.day_of_week,
-            'start_hour': self.start_hour.strftime('%H:%M:%S'),
-            'end_hour': self.end_hour.strftime('%H:%M:%S')
+            'day_of_week': self.day_of_week.value,
+            'start_time': self.start_time.strftime('%H:%M:%S'),
+            'end_time': self.end_time.strftime('%H:%M:%S')
         }
+
 
 class Appointment(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -1,7 +1,7 @@
 from flask import Flask
 from src.extensions import db
 from src.endpoints import home
-from src.models import Doctor, WorkingHour, Appointment
+from src.models import Doctor, WorkingTime, Appointment, DayOfWeekEnum
 import datetime
 
 
@@ -16,18 +16,18 @@ def initialize_db():
         db.session.add(doctor2)
 
         # Create working hours
-        working_hours1_1 = WorkingHour(doctor_id=1, day_of_week="Monday", start_hour=datetime.time(9, 0, 0), end_hour=datetime.time(17, 0, 0))
+        working_hours1_1 = WorkingTime(doctor_id=1, day_of_week=DayOfWeekEnum.Monday, start_time=datetime.time(9, 0, 0), end_time=datetime.time(17, 0, 0))
         db.session.add(working_hours1_1)
 
-        working_hours1_2 = WorkingHour(doctor_id=1, day_of_week="Tuesday", start_hour=datetime.time(9, 0, 0), end_hour=datetime.time(17, 0, 0))
+        working_hours1_2 = WorkingTime(doctor_id=1, day_of_week=DayOfWeekEnum.Tuesday, start_time=datetime.time(9, 0, 0), end_time=datetime.time(17, 0, 0))
         db.session.add(working_hours1_2)
 
-        working_hours1_3 = WorkingHour(doctor_id=1, day_of_week="Thursday", start_hour=datetime.time(0, 0, 0), end_hour=datetime.time(8, 0, 0))
+        working_hours1_3 = WorkingTime(doctor_id=1, day_of_week=DayOfWeekEnum.Thursday, start_time=datetime.time(0, 0, 0), end_time=datetime.time(8, 0, 0))
         db.session.add(working_hours1_3)
 
-        working_hours2_1 = WorkingHour(doctor_id=2, day_of_week="Monday", start_hour=datetime.time(9, 0, 0), end_hour=datetime.time(17, 0, 0))
+        working_hours2_1 = WorkingTime(doctor_id=2, day_of_week=DayOfWeekEnum.Monday, start_time=datetime.time(9, 0, 0), end_time=datetime.time(17, 0, 0))
         db.session.add(working_hours2_1)
-        working_hours2_2 = WorkingHour(doctor_id=2, day_of_week="Tuesday", start_hour=datetime.time(9, 0, 0), end_hour=datetime.time(17, 0, 0))
+        working_hours2_2 = WorkingTime(doctor_id=2, day_of_week=DayOfWeekEnum.Tuesday, start_time=datetime.time(9, 0, 0), end_time=datetime.time(17, 0, 0))
         db.session.add(working_hours2_2)
 
         # Create appointments
